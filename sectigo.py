@@ -113,5 +113,8 @@ def download_cert(orderNumber):
     response = requests.request(
         "POST", url, headers=headers, data=payload).text
     FQDN = response.splitlines()[1]
-    cert = response.split('\n', 2)[2][:-1]
+    response_cert = response.split('\n', 2)[2][:-1]
+    split_cert = response_cert.split('-----END CERTIFICATE-----')[::-1]
+    cert_list = [s + '-----END CERTIFICATE-----' for s in split_cert][1:]
+    cert = ''.join(cert_list)[1:]
     return FQDN, cert

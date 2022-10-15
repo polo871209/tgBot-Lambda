@@ -1,3 +1,4 @@
+import imp
 import tgbot
 import pwen
 import sectigo
@@ -18,9 +19,12 @@ def lambda_handler(event, context):
             validation, order_number, pkey, csr = sectigo.apply_ssl(
                 'dvsingle', text[1], text[2])
             tgbot.send_message(validation, chat_id)
-            awss3.data(f'{order_number}_{text[1]}/', f'{text[1]}.key', pkey)
-            awss3.data(f'{order_number}_{text[1]}/', f'{text[1]}.csr', csr)
+            awss3.upload_data(
+                f'{order_number}_{text[1]}/', f'{text[1]}.key', pkey)
+            awss3.upload_data(
+                f'{order_number}_{text[1]}/', f'{text[1]}.csr', csr)
         elif 'revalidate' in text[0]:
+            tgbot.send_message('Revalidating...', chat_id)
             response = sectigo.revalidate(text[1])
             if 'errorCode=0' in response:
                 tgbot.send_message(
@@ -29,6 +33,7 @@ def lambda_handler(event, context):
                 tgbot.send_message(
                     'Please enter valid order number, or order already issued.', chat_id)
         elif 'certstatus' in text[0]:
+            tgbot.send_message('Checking status...', chat_id)
             response = sectigo.certstatus(text[1])
             try:
                 tgbot.send_message(
@@ -38,9 +43,15 @@ def lambda_handler(event, context):
                     f'Order: {text[1]} \nStatus: Not Issued\nTry /revalidate or check your DNS record.', chat_id)
         elif 'downloadcert' in text[0]:
             try:
+                tgbot.send_message('Downloading...', chat_id)
                 FQDN, cert = sectigo.download_cert(text[1])
-                awss3.data(f'{text[1]}_{FQDN}/', f'{FQDN}.pem', cert)
-                tgbot.send_message('Downlaod success!', chat_id)
+                awss3.upload_data(f'{text[1]}_{FQDN}/', f'{FQDN}.pem', cert)
+                key_url = awss3.presigned_url(
+                    f'{text[1]}_{FQDN}/{FQDN}.key').replace('&', '%26')
+                pem_url = awss3.presigned_url(
+                    f'{text[1]}_{FQDN}/{FQDN}.pem').replace('&', '%26')
+                tgbot.send_message(
+                    f'Domain: {FQDN}\nkey: {key_url}\npem: {pem_url}\nLink expire in 1hr', chat_id)
             except:
                 tgbot.send_message(
                     f'Downlaod failed!\nPlease input valid order or check /certstatus', chat_id)
