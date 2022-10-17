@@ -1,13 +1,15 @@
 import requests
 import os
 
-api_token = os.environ['api_token']  # env from lambda
-
-def send_message(reply, chat_id):  # Send message
-    url_req = f'https://api.telegram.org/bot{api_token}/sendMessage?chat_id={chat_id}&text={reply}'
-    requests.get(url_req)
+api_token = os.environ['api_token']
 
 
-def send_copyable_message(reply, chat_id):  # Send MarkDown message
-    url_req = f'https://api.telegram.org/bot{api_token}/sendMessage?chat_id={chat_id}&text=`{reply}`&parse_mode=MarkDown'
+def send_message(message: str, chat_id: str):
+    """use tg bot to send message
+
+    Args:
+        message (str): message
+        chat_id (str): chat_id
+    """
+    url_req = f'https://api.telegram.org/bot{api_token}/sendMessage?chat_id={chat_id}&text={message}'
     requests.get(url_req)

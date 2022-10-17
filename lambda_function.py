@@ -1,4 +1,3 @@
-import imp
 import tgbot
 import pwen
 import sectigo
@@ -35,12 +34,13 @@ def lambda_handler(event, context):
         elif 'certstatus' in text[0]:
             tgbot.send_message('Checking status...', chat_id)
             response = sectigo.certstatus(text[1])
-            try:
+            if 'Not' in response:
                 tgbot.send_message(
-                    f'Order: {text[1]} \nStatus: Issued\nExpire on: {response.split()[2]}', chat_id)
-            except:
+                    f'Order: {text[1]}\nStatus: Not Issued\nUse /revalidate or check your cname value', chat_id)
+            else:
                 tgbot.send_message(
-                    f'Order: {text[1]} \nStatus: Not Issued\nTry /revalidate or check your DNS record.', chat_id)
+                    f'Order: {text[1]}\nStatus: Issued\nExpire date: {response}', chat_id)
+
         elif 'downloadcert' in text[0]:
             try:
                 tgbot.send_message('Downloading...', chat_id)

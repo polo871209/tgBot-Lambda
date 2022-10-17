@@ -1,23 +1,48 @@
 import requests
 import hashlib
 
-def request_api(first5_char):  # /pwnedcheck api
+
+def request_api(first5_char: str):
+    """pwendpassword check api
+
+    Args:
+        first5_char (str): _description_
+
+    Returns:
+        str: api response
+    """
     url = 'https://api.pwnedpasswords.com/range/' + first5_char
-    res = requests.get(url)
-    return res.text  # Response in text
+    response = requests.get(url).text
+    return response  # Response in text
 
 
-def sha1_hash(password):  # /pwnedcheck hash sha 1
+def sha1_hash(password: str):
+    """sha1_hash
+
+    Args:
+        password (str): any password
+
+    Returns:
+        str: hashed password
+    """
     hashed_string = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
     return hashed_string
 
 
-def split_res(response):  # /pwnedcheck split API response in to hash and count
+def split_res(response: str):
     split_res = (line.split(':') for line in response.splitlines())
     return split_res
 
 
-def main(password):  # /pwnedcheck main
+def main(password: str):
+    """pwen checker api __main__
+
+    Args:
+        password (str): any password
+
+    Returns:
+        str: pwend check result
+    """
     hashed_password = sha1_hash(password)
     first5_char, tail = hashed_password[:5], hashed_password[5:]
     response = request_api(first5_char)  # Request using first 5 hash

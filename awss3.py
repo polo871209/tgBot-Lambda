@@ -1,15 +1,25 @@
+# aws S3 functions
 from botocore.exceptions import ClientError
 import boto3
 import os
 
-# AWS variable
+# AWS cerdential
 access_key_id = os.environ['access_key_id']
 secret_access_key = os.environ['secret_access_key']
 bucket_name = 'po-lambda'
 
 
-def upload_data(folder_path, file_name, data):
-    '''Send data to S3. folder_path must end with /'''
+def upload_data(folder_path: str, file_name: str, data: str):
+    """upload data to S3 using access key
+
+    Args:
+        folder_path (str): Path end with /.
+        file_name (str): File name.
+        data (str): Data in the file.
+
+    Returns:
+        str: result
+    """
     session = boto3.Session(aws_access_key_id=access_key_id,
                             aws_secret_access_key=secret_access_key)
     s3 = session.resource('s3')  # Create S3 session.
@@ -23,12 +33,22 @@ def upload_data(folder_path, file_name, data):
         return 'Failed'
 
 
-def presigned_url(object_key, expiry=3600):
+def presigned_url(file_path: str, expiry=3600):
+    """generate S3 presigned url using access key
 
-    client = boto3.client("s3", aws_access_key_id=access_key_id, aws_secret_access_key=secret_access_key)
+    Args:
+        file_path (str): File path / file name.
+        expiry (int, optional): Defaults to 3600.
+
+    Returns:
+        _type_: _description_
+    """
+
+    client = boto3.client("s3", aws_access_key_id=access_key_id,
+                          aws_secret_access_key=secret_access_key)
     try:
         response = client.generate_presigned_url(
-            'get_object', Params={'Bucket': bucket_name, 'Key': object_key}, ExpiresIn=expiry)
+            'get_object', Params={'Bucket': bucket_name, 'Key': file_path}, ExpiresIn=expiry)
         return response
     except ClientError as err:
-        print(err)
+        return err
