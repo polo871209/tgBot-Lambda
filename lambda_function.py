@@ -47,9 +47,9 @@ def lambda_handler(event, context):
                 FQDN, cert = sectigo.download_cert(text[1])
                 awss3.upload_data(f'{text[1]}_{FQDN}/', f'{FQDN}.pem', cert)
                 key_url = awss3.presigned_url(
-                    f'{text[1]}_{FQDN}/{FQDN}.key').replace('&', '%26')
+                    f'{text[1]}_{FQDN}/{FQDN}.key')
                 pem_url = awss3.presigned_url(
-                    f'{text[1]}_{FQDN}/{FQDN}.pem').replace('&', '%26')
+                    f'{text[1]}_{FQDN}/{FQDN}.pem')
                 tgbot.send_message(
                     f'Domain: {FQDN}\nkey: {key_url}\npem: {pem_url}\nLink expire in 1hr', chat_id)
             except:
