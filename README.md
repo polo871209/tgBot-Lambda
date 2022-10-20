@@ -18,7 +18,7 @@ Goals to automate daily worklaods with serverless architecture
 ![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/certstatus.png?raw=true)  
       
 **Download certifcate using presignurl**    
-![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/downlaodcert.png?raw=true)    
+![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/downloadcert.png?raw=true)    
     
-**Successfully change all the manual process into command**
+**Successfully change all the manual process into command**     
 This would save me 1-2hr daily.
