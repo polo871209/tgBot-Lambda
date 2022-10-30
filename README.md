@@ -7,7 +7,7 @@ Goals to automate daily worklaods with serverless architecture
 
 ### topology
 
-![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/topology.png?raw=true)  
+![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/topology.png?raw=true)
 
 ### RESULTS
 
@@ -16,7 +16,7 @@ Goals to automate daily worklaods with serverless architecture
 **Now, we can simply apply SSL simply calling our bot, this will return CNAME value**
 ![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/applyssl.png?raw=true)  
 
-**Add to your DNS record**  
+**Add to your DNS record**
 ![alt text](https://github.com/polo871209/tgBot-Lambda/blob/main/images/dig.png?raw=true)  
   
 **Domain Control Validation**  
