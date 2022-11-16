@@ -1,63 +1,72 @@
-import tgbot
-import pwen
-import sectigo
-import awss3
+from sectigo import Sectigo, certstatus, download_cert, revalidate
+from tgbot import Tgbot
+from aws import S3
 import json
 
 
 def lambda_handler(event, context):
     message = json.loads(event['body'])
     chat_id = str(message['message']['chat']['id'])
-    try:
+    tgbot = Tgbot(chat_id)
+    try:  # Check if user enter valid syntax
         text = message['message']['text'].split()
-        if 'pwnedcheck' in text[0]:
-            tgbot.send_message(pwen.main(text[1]), chat_id)
-        elif 'dvsingle' in text[0]:
-            tgbot.send_message(
-                f'dvsingle: {text[1]}, generating cname...', chat_id)
-            validation, order_number, pkey, csr = sectigo.apply_ssl(
-                'dvsingle', text[1], text[2])
-            tgbot.send_message(validation, chat_id)
-            awss3.upload_data(
-                f'{order_number}_{text[1]}/', f'{text[1]}.key', pkey)
-            awss3.upload_data(
-                f'{order_number}_{text[1]}/', f'{text[1]}.csr', csr)
-        elif 'revalidate' in text[0]:
-            tgbot.send_message('Revalidating...', chat_id)
-            response = sectigo.revalidate(text[1])
-            if 'errorCode=0' in response:
-                tgbot.send_message(
-                    f'Success!\nUse: /certstatus to check status.', chat_id)
-            else:
-                tgbot.send_message(
-                    'Please enter valid order number, or order already issued.', chat_id)
-        elif 'certstatus' in text[0]:
-            tgbot.send_message('Checking status...', chat_id)
-            response = sectigo.certstatus(text[1])
-            if 'Not' in response:
-                tgbot.send_message(
-                    f'Order: {text[1]}\nStatus: Not Issued\nUse /revalidate or check your cname value', chat_id)
-            else:
-                tgbot.send_message(
-                    f'Order: {text[1]}\nStatus: Issued\nExpire date: {response}', chat_id)
-
-        elif 'downloadcert' in text[0]:
+        command = text[0]
+        argument = text[1:]
+    except:  # Please input valid syntax
+        tgbot.send_message('Valid syntax: {/Command} {Arguments}')
+    else:
+        if '/dvsingle' in command:  # Generate dvsingle
+            tgbot.send_message(f'dvsingle: {argument[0]}, generating cname...')
+            ssl = Sectigo(argument[0], argument[1])
             try:
-                tgbot.send_message('Downloading...', chat_id)
-                FQDN, cert = sectigo.download_cert(text[1])
-                awss3.upload_data(f'{text[1]}_{FQDN}/', f'{FQDN}.pem', cert)
-                key_url = awss3.presigned_url(
-                    f'{text[1]}_{FQDN}/{FQDN}.key')
-                pem_url = awss3.presigned_url(
-                    f'{text[1]}_{FQDN}/{FQDN}.pem')
-                tgbot.send_message(
-                    f'Domain: {FQDN}\nkey: {key_url}\npem: {pem_url}\nLink expire in 1hr', chat_id)
+                validation, order_number, pkey, csr = ssl.dv_single()
+                s3 = S3()
             except:
                 tgbot.send_message(
-                    f'Downlaod failed!\nPlease input valid order or check /certstatus', chat_id)
+                    'Failed to generate DV single cert, please contact admin')
+            else:
+                file_path = f'{order_number}_{argument[0]}/{argument[0]}'
+                r1 = s3.upload_data(
+                    f'{file_path}.key', pkey)
+                r2 = s3.upload_data(
+                    f'{file_path}.csr', csr)
+                if r1 and r2:
+                    tgbot.send_message(validation)
+                else:
+                    tgbot.send_message(
+                        'Data upload to s3 failed, please contact admin')
+        elif '/revalidate' in command:  # Revalidate  order
+            tgbot.send_message('Revalidating...Please wait')
+            response = revalidate(argument[0])
+            if response:
+                tgbot.send_message(
+                    'Success!\nUse: /certstatus to check status.')
+            else:
+                tgbot.send_message(
+                    'Please enter valid order number, or order already issued.')
+        elif '/certstatus' in command:  # Order status
+            tgbot.send_message('Checking status...Please wait')
+            response = certstatus(argument[0])
+            if not response:
+                tgbot.send_message(
+                    f'Order: {argument[0]}\nStatus: Not Issued\nUse /revalidate or check your cname value')
+            else:
+                tgbot.send_message(
+                    f'Order: {argument[0]}\nStatus: Issued\nExpire date: {response}')
+
+        elif '/downloadcert' in text[0]:  # Download order
+            try:
+                tgbot.send_message('Downloading...Please wait')
+                common_name, cert = download_cert(argument[0])
+            except:
+                tgbot.send_message(
+                    'Downlaod failed!\nPlease input valid order or check /certstatus')
+            else:
+                s3 = S3()
+                s3.upload_data(
+                    f'{argument[0]}_{common_name}/{common_name}.pem', cert)
+                tgbot.send_message(f'Domain: {common_name}')
         else:
-            tgbot.send_message('Click Menu to see what you can do', chat_id)
-    except:
-        tgbot.send_message('Valid syntax: {/Command} {Arguments}', chat_id)
+            tgbot.send_message('Click Menu to see what you can do')
 
     return {"statusCode": 200}

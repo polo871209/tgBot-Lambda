@@ -1,17 +1,22 @@
 import requests
 import os
 
-api_token = os.environ['api_token']
+
+API_TOKEN = os.environ['api_token']
 
 
-def send_message(message: str, chat_id: str):
-    """use tg bot to send message
+class Tgbot():
 
-    Args:
-        message (str): message
-        chat_id (str): chat_id
-    """
-    url_req = f'https://api.telegram.org/bot{api_token}/sendMessage'
-    params = {'chat_id': chat_id,
-              'text': message}
-    requests.get(url_req, params=params)
+    def __init__(self, chat_id):
+        self.chat_id = chat_id
+
+    def send_message(self, message: str):
+        """send message to chat
+
+        Args:
+            message (str): message
+        """
+        url_req = f'https://api.telegram.org/bot{API_TOKEN}/sendMessage'
+        params = {'chat_id': self.chat_id,
+                  'text': message}
+        requests.get(url_req, params=params)
