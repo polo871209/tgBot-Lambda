@@ -39,6 +39,29 @@ def lambda_handler(event, context):
                 else:
                     tgbot.send_message(
                         'Data upload to s3 failed, please contact admin')
+
+        if '/dvwildcard' in command:  # Generate dvsingle
+            try:
+                tgbot.send_message(
+                    f'dvwildcard: {argument[0]}, generating cname...')
+                s3 = S3(BUCKET_NAME)
+                ssl = Sectigo(argument[0], argument[1])
+                validation, order_number, pkey, csr = ssl.dv_wildcard()
+            except Exception as err:
+                tgbot.send_message(
+                    'Failed to generate DV wildcard cert, please contact admin')
+                tgbot.send_message(err)
+            else:
+                file_path = f'{order_number}_{argument[0]}/{argument[0]}'
+                r1 = s3.upload_data(
+                    f'{file_path}.key', pkey)
+                r2 = s3.upload_data(
+                    f'{file_path}.csr', csr)
+                if r1 and r2:
+                    tgbot.send_message(validation)
+                else:
+                    tgbot.send_message(
+                        'Data upload to s3 failed, please contact admin')
         elif '/revalidate' in command:  # Revalidate  order
             tgbot.send_message('Revalidating...Please wait')
             response = revalidate(argument[0])

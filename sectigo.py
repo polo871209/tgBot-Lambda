@@ -14,7 +14,6 @@ REVALIDATE_URL = 'https://secure.trust-provider.com/products/!AutoUpdateDCV'
 COLLECTSSL_URL = 'https://secure.trust-provider.com/products/download/CollectSSL'
 DV_SINGLE = '287'
 DV_WILDCARE = '289'
-DV_MUTIDOMAIN = '279'
 
 
 class Sectigo():
@@ -135,6 +134,23 @@ class Sectigo():
         """
         pkey, csr = self.output_key_csr()
         self.params['product'] = DV_SINGLE
+        self.params['csr'] = csr
+        response = requests.post(APPLY_SSL_URL, params=self.params).text
+        if response.splitlines()[0] == '0':
+            validation, order_number = self.validation(csr, response)
+            return validation, order_number, pkey, csr
+        else:
+            return response
+
+    def dv_wildcard(self):
+        """dv_wildcard api 
+
+        Returns:
+            Success: validation, order_number, pkey, csr
+            Failed: response
+        """
+        pkey, csr = self.output_key_csr()
+        self.params['product'] = DV_WILDCARE
         self.params['csr'] = csr
         response = requests.post(APPLY_SSL_URL, params=self.params).text
         if response.splitlines()[0] == '0':
