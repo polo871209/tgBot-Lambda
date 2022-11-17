@@ -1,7 +1,10 @@
-from sectigo import Sectigo, certstatus, download_cert, revalidate
+from sectigo import *
 from tgbot import Tgbot
 from aws import S3
 import json
+
+
+BUCKET_NAME = 'po-lambda'
 
 
 def lambda_handler(event, context):
@@ -16,12 +19,13 @@ def lambda_handler(event, context):
         tgbot.send_message('Valid syntax: {/Command} {Arguments}')
     else:
         if '/dvsingle' in command:  # Generate dvsingle
-            tgbot.send_message(f'dvsingle: {argument[0]}, generating cname...')
-            ssl = Sectigo(argument[0], argument[1])
             try:
+                tgbot.send_message(
+                    f'dvsingle: {argument[0]}, generating cname...')
+                s3 = S3(BUCKET_NAME)
+                ssl = Sectigo(argument[0], argument[1])
                 validation, order_number, pkey, csr = ssl.dv_single()
-                s3 = S3()
-            except:
+            except Exception as err:
                 tgbot.send_message(
                     'Failed to generate DV single cert, please contact admin')
             else:
@@ -57,15 +61,24 @@ def lambda_handler(event, context):
         elif '/downloadcert' in text[0]:  # Download order
             try:
                 tgbot.send_message('Downloading...Please wait')
+                s3 = S3(BUCKET_NAME)
                 common_name, cert = download_cert(argument[0])
-            except:
+                path = f'{argument[0]}_{common_name}/{common_name}'
+                key = s3.get_object(f'{path}.key')
+                passphrase, pfx = pem_to_pfx(key, cert)
+                s3.upload_data(f'{path}.pem', cert)
+                s3.upload_data(f'{path}.crt', cert)
+                s3.upload_data(f'{path}.pfx', pfx)
+                s3.upload_data(
+                    f'{argument[0]}_{common_name}/password.txt', passphrase)
+                s3.zip_folder(f'{argument[0]}_{common_name}', path)
+            except Exception as err:
                 tgbot.send_message(
                     'Downlaod failed!\nPlease input valid order or check /certstatus')
+                tgbot.send_message(err)
             else:
-                s3 = S3()
-                s3.upload_data(
-                    f'{argument[0]}_{common_name}/{common_name}.pem', cert)
-                tgbot.send_message(f'Domain: {common_name}')
+                pre_signurl = s3.gen_presigned_url(f'{path}.zip')
+                tgbot.send_message(pre_signurl)
         else:
             tgbot.send_message('Click Menu to see what you can do')
 

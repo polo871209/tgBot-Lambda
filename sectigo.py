@@ -214,7 +214,22 @@ def download_cert(orderNumber: str):
         return FQDN, cert
 
 
-# ssl = Sectigo('test.com', '390')
-# validation, pkey, csr = ssl.dv_single()
-# print(validation)
-print(certstatus('1265888003'))
+def pem_to_pfx(pkey, pem):
+    """PEM format to PFX format
+
+    Args:
+        pkey (str): private key
+        pem (str): pem
+
+    Returns:
+       passphrase,  pfx
+    """
+    key = crypto.load_privatekey(crypto.FILETYPE_PEM, pkey)
+    cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
+    pkcs = crypto.PKCS12()
+    pkcs.set_privatekey(key)
+    pkcs.set_certificate(cert)
+    passphrase = ''.join(random.choice(
+        string.ascii_letters + string.digits)for x in range(10))
+    pfx = pkcs.export(passphrase=passphrase.encode('ASCII'))
+    return passphrase,  pfx
