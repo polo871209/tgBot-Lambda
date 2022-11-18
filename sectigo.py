@@ -18,7 +18,7 @@ DV_WILDCARE = '289'
 
 class Sectigo():
 
-    def __init__(self, common_name: str, days: str) -> None:
+    def __init__(self, common_name: str, days='370'):
         self.common_name = common_name
         self.days = days
         self.unique_value = self.gen_uniquevalue()

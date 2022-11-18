@@ -23,7 +23,10 @@ def lambda_handler(event, context):
                 tgbot.send_message(
                     f'dvsingle: {argument[0]}, generating cname...')
                 s3 = S3(BUCKET_NAME)
-                ssl = Sectigo(argument[0], argument[1])
+                try: 
+                    ssl = Sectigo(argument[0], argument[1])
+                except IndexError:
+                    ssl = Sectigo(argument[0])
                 validation, order_number, pkey, csr = ssl.dv_single()
             except Exception as err:
                 tgbot.send_message(
@@ -40,17 +43,19 @@ def lambda_handler(event, context):
                     tgbot.send_message(
                         'Data upload to s3 failed, please contact admin')
 
-        if '/dvwildcard' in command:  # Generate dvsingle
+        elif '/dvwildcard' in command:  # Generate dvsingle
             try:
                 tgbot.send_message(
                     f'dvwildcard: {argument[0]}, generating cname...')
                 s3 = S3(BUCKET_NAME)
-                ssl = Sectigo(argument[0], argument[1])
+                try: 
+                    ssl = Sectigo(argument[0], argument[1])
+                except IndexError:
+                    ssl = Sectigo(argument[0])
                 validation, order_number, pkey, csr = ssl.dv_wildcard()
             except Exception as err:
                 tgbot.send_message(
                     'Failed to generate DV wildcard cert, please contact admin')
-                tgbot.send_message(err)
             else:
                 file_path = f'{order_number}_{argument[0]}/{argument[0]}'
                 r1 = s3.upload_data(
@@ -64,22 +69,30 @@ def lambda_handler(event, context):
                         'Data upload to s3 failed, please contact admin')
         elif '/revalidate' in command:  # Revalidate  order
             tgbot.send_message('Revalidating...Please wait')
-            response = revalidate(argument[0])
-            if response:
-                tgbot.send_message(
-                    'Success!\nUse: /certstatus to check status.')
+            try:
+                response = revalidate(argument[0])
+            except IndexError:
+                tgbot.send_message('Please enter a order number')
             else:
-                tgbot.send_message(
-                    'Please enter valid order number, or order already issued.')
+                if response:
+                    tgbot.send_message(
+                        'Success!\nUse: /certstatus to check status.')
+                else:
+                    tgbot.send_message(
+                        'Please enter valid order number, or order already issued.')
         elif '/certstatus' in command:  # Order status
             tgbot.send_message('Checking status...Please wait')
-            response = certstatus(argument[0])
-            if not response:
-                tgbot.send_message(
-                    f'Order: {argument[0]}\nStatus: Not Issued\nUse /revalidate or check your cname value')
+            try:
+                response = certstatus(argument[0])
+            except IndexError:
+                tgbot.send_message('Please enter a order number')
             else:
-                tgbot.send_message(
-                    f'Order: {argument[0]}\nStatus: Issued\nExpire date: {response}')
+                if not response:
+                    tgbot.send_message(
+                        f'Order: {argument[0]}\nStatus: Not Issued\nUse /revalidate or check your cname value')
+                else:
+                    tgbot.send_message(
+                        f'Order: {argument[0]}\nStatus: Issued\nExpire date: {response}')
 
         elif '/downloadcert' in text[0]:  # Download order
             try:
@@ -98,7 +111,6 @@ def lambda_handler(event, context):
             except Exception as err:
                 tgbot.send_message(
                     'Downlaod failed!\nPlease input valid order or check /certstatus')
-                tgbot.send_message(err)
             else:
                 pre_signurl = s3.gen_presigned_url(f'{path}.zip')
                 tgbot.send_message(pre_signurl)

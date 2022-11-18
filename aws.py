@@ -1,7 +1,6 @@
 import boto3
 import os
 import shutil
-from tgbot import Tgbot
 
 
 class S3():
