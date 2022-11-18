@@ -64,6 +64,6 @@ Remove Webhook:
 https://api.telegram.org/bot<bot-api-token>/setWebhook?remove  
 GetUpdate: (message recieve from webhook)  
 https://api.telegram.org/bot<bot-api-token>/getUpdates  
-offsetupdate: (offest incase message stuck  )
+offsetupdate: (offest incase message stuck)  
 https://api.telegram.org/bot<bot-api-token>/getupdates?offset=<update-id>  
 #### Done
