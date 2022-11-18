@@ -18,7 +18,7 @@
 ### RESULTS
 
 ### [Here](https://github.com/polo871209/tgBot-Lambda/blob/main/deploy.md) is how I deploy step by step on AWS.
-### If you want to know how this code work, connect with me on [linkdIn](https://www.linkedin.com/in/potawian1998/).
+### If you want to know how this code work, connect with me on [linkedIn](https://www.linkedin.com/in/potawian1998/).
 
 #### Apply sectigo DV single/wildcard ssl
 
