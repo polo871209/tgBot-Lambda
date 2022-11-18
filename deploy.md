@@ -56,14 +56,14 @@ now is time to deploy your lambda function as rest API
 - click on action > deploy api, than you should end up with an api url
 ![](https://i.imgur.com/RNLyD2R.png)
 
-### Step 5. tgbot Webhook
-Set Webhook:
-https://api.telegram.org/bot<bot-api-token>/setWebhook?url=<api-gateway-url>  
-here are some other webhook api I found useful:  
-Remove Webhook:
-https://api.telegram.org/bot<bot-api-token>/setWebhook?remove  
-GetUpdate: (message recieve from webhook)  
-https://api.telegram.org/bot<bot-api-token>/getUpdates  
-offsetupdate: (offest incase message stuck)  
+### Step 5. tgbot Webhook  
+Set Webhook:  
+https://api.telegram.org/bot<bot-api-token>/setWebhook?url=<api-gateway-url>    
+here are some other webhook api I found useful:    
+Remove Webhook:  
+https://api.telegram.org/bot<bot-api-token>/setWebhook?remove    
+GetUpdate: (message recieve from webhook)    
+https://api.telegram.org/bot<bot-api-token>/getUpdates    
+offsetupdate: (offest incase message stuck)    
 https://api.telegram.org/bot<bot-api-token>/getupdates?offset=<update-id>  
 #### Done
