@@ -11,7 +11,7 @@ I will skip through how to create an [AWS account](https://aws.amazon.com/premiu
 
 ### Step 2. IAM roles
 to allow lambda to communicate with S3 you first need a role to grant permission to lambda.
-- Create policy, go to IAM > policy > create policy JSON, below is the policy template, <your-bucket-name> as your bucket name, this will grant Lambda full access to your bucket.
+- Create policy, go to IAM > policy > create policy JSON, below is the policy template, {your-bucket-name} as your bucket name, this will grant Lambda full access to your bucket.
 ```json
 {
     "Version": "2012-10-17",
@@ -56,14 +56,14 @@ now is time to deploy your lambda function as rest API
 - click on action > deploy api, than you should end up with an api url
 ![](https://i.imgur.com/RNLyD2R.png)
 
-### Step 5. tgbot Webhook  
+### Step 5. tgbot Webhook 
 Set Webhook:  
-https://api.telegram.org/bot<bot-api-token>/setWebhook?url=<api-gateway-url>    
-here are some other webhook api I found useful:    
+https://api.telegram.org/bot{bot-api-token}/setWebhook?url={api-gateway-url}  
+here are some other webhook api I found useful:  
 Remove Webhook:  
-https://api.telegram.org/bot<bot-api-token>/setWebhook?remove    
-GetUpdate: (message recieve from webhook)    
-https://api.telegram.org/bot<bot-api-token>/getUpdates    
-offsetupdate: (offest incase message stuck)    
-https://api.telegram.org/bot<bot-api-token>/getupdates?offset=<update-id>  
+https://api.telegram.org/bot{bot-api-token}/setWebhook?remove  
+GetUpdate: (message recieve from webhook)      
+https://api.telegram.org/bot{bot-api-token}/getUpdates  
+offsetupdate: (offest incase message stuck)  
+https://api.telegram.org/bot{bot-api-token}/getupdates?offset={update-id}  
 #### Done
