@@ -1,10 +1,11 @@
 import boto3
 import os
 import shutil
-
+# this are deploy pn Lamda, so no access key needed, function should have role to access specify bucket.
 
 class S3():
     def __init__(self, bucket_name: str):
+        #setting up sessions
         self.client = boto3.client('s3')
         self.s3 = boto3.resource('s3')
         self.bucket = bucket_name
@@ -21,7 +22,7 @@ class S3():
         """
         result = self.client.put_object(
             Body=data, Bucket=self.bucket, Key=path)
-        res = result.get('ResponseMetadata')
+        res = result.get('ResponseMetadata') # check if success
         if res.get('HTTPStatusCode') == 200:
             return True
         else:
@@ -40,7 +41,7 @@ class S3():
         return obj.get()['Body'].read().decode('utf-8')
 
     def zip_folder(self, dir_name: str, output_filename: str):
-        """zip s3 diectory and upload to bucket
+        """zip s3 diectory and upload to bucket, this utilize lambda /tmp/ dir to zip file and send back to bucket.
 
         Args:
             dir_name (str): s3 diectory name

@@ -4,7 +4,7 @@ from aws import S3
 import json
 
 
-BUCKET_NAME = 'po-lambda'
+BUCKET_NAME = 'your_bucketname'
 
 
 def lambda_handler(event, context):
