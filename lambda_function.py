@@ -1,4 +1,4 @@
-from sectigo import *
+from sectigo import Sectigo
 from tgbot import Tgbot
 from aws import S3
 import json
