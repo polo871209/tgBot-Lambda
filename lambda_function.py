@@ -70,7 +70,7 @@ def lambda_handler(event, context):
         elif '/revalidate' in command:  # Revalidate  order
             tgbot.send_message('Revalidating...Please wait')
             try:
-                response = revalidate(argument[0])
+                response = Sectigo.revalidate(argument[0])
             except IndexError:
                 tgbot.send_message('Please enter a order number')
             else:
@@ -83,7 +83,7 @@ def lambda_handler(event, context):
         elif '/certstatus' in command:  # Order status
             tgbot.send_message('Checking status...Please wait')
             try:
-                response = certstatus(argument[0])
+                response = Sectigo.certstatus(argument[0])
             except IndexError:
                 tgbot.send_message('Please enter a order number')
             else:
@@ -98,10 +98,10 @@ def lambda_handler(event, context):
             try:
                 tgbot.send_message('Downloading...Please wait')
                 s3 = S3(BUCKET_NAME)
-                common_name, cert = download_cert(argument[0])
+                common_name, cert = Sectigo.download_cert(argument[0])
                 path = f'{argument[0]}_{common_name}/{common_name}'
                 key = s3.get_object(f'{path}.key')
-                passphrase, pfx = pem_to_pfx(key, cert)
+                passphrase, pfx = Sectigo.pem_to_pfx(key, cert)
                 s3.upload_data(f'{path}.pem', cert)
                 s3.upload_data(f'{path}.crt', cert)
                 s3.upload_data(f'{path}.pfx', pfx)

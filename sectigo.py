@@ -159,93 +159,95 @@ class Sectigo():
         else:
             return response
 
+    @staticmethod
+    def revalidate(orderNumber: str):
+        """Revalidate DNS record
 
-def revalidate(orderNumber: str):
-    """Revalidate DNS record
+        Args:
+            orderNumber (str): order number
 
-    Args:
-        orderNumber (str): order number
+        Returns:
+            Success: True, Failed: Flase
+        """
+        params = {'LOGINNAME': LOGINNAME,
+                  'LOGINPASSWORD': LOGINPASSWORD,
+                  'orderNumber': orderNumber,
+                  'newMethod': 'CNAME_CSR_HASH'}
+        if '0' in requests.post(REVALIDATE_URL, params=params).text:
+            return True
+        else:
+            return False
 
-    Returns:
-        Success: True, Failed: Flase
-    """
-    params = {'LOGINNAME': LOGINNAME,
-              'LOGINPASSWORD': LOGINPASSWORD,
-              'orderNumber': orderNumber,
-              'newMethod': 'CNAME_CSR_HASH'}
-    if '0' in requests.post(REVALIDATE_URL, params=params).text:
-        return True
-    else:
-        return False
+    @staticmethod
+    def certstatus(orderNumber: str):
+        """Check certificate status
 
+        Args:
+            orderNumber (str): order number
 
-def certstatus(orderNumber: str):
-    """Check certificate status
+        Returns:
+            Issued: expiredate, Not Issued: False
+        """
+        params = {'LOGINNAME': LOGINNAME,
+                  'LOGINPASSWORD': LOGINPASSWORD,
+                  'orderNumber': orderNumber,
+                  'queryType': '0',
+                  'showValidityPeriod': 'Y'}
+        response = requests.post(COLLECTSSL_URL, params=params).text
+        try:
+            expiredate = response.split()[2]
+            return expiredate
+        except IndexError:
+            return False
 
-    Args:
-        orderNumber (str): order number
+    @staticmethod
+    def download_cert(orderNumber: str):
+        """download certificate
 
-    Returns:
-        Issued: expiredate, Not Issued: False
-    """
-    params = {'LOGINNAME': LOGINNAME,
-              'LOGINPASSWORD': LOGINPASSWORD,
-              'orderNumber': orderNumber,
-              'queryType': '0',
-              'showValidityPeriod': 'Y'}
-    response = requests.post(COLLECTSSL_URL, params=params).text
-    try:
-        expiredate = response.split()[2]
-        return expiredate
-    except IndexError:
-        return False
+        Args:
+            orderNumber (str): order number
 
+        Returns:
+            Success: FQDN, cert
+            Failed: False
+        """
+        params = {'LOGINNAME': LOGINNAME,
+                  'LOGINPASSWORD': LOGINPASSWORD,
+                  'orderNumber': orderNumber,
+                  'queryType': '1',
+                  'responseType': '3',
+                  'showFQDN': 'Y'}
+        response = requests.post(COLLECTSSL_URL, params=params).text
+        try:
+            FQDN = response.splitlines()[1]
+        except IndexError:
+            return False
+        else:
+            response_cert = response.split('\n', 2)[2][:-1]
+            split_cert = response_cert.split('-----END CERTIFICATE-----')[::-1]
+            cert_list = [
+                s + '-----END CERTIFICATE-----' for s in split_cert][1:]
+            cert_list.insert(3, '\n')
+            cert = ''.join(cert_list)[1:]
+            return FQDN, cert
 
-def download_cert(orderNumber: str):
-    """download certificate
+    @staticmethod
+    def pem_to_pfx(pkey, pem):
+        """PEM format to PFX format
 
-    Args:
-        orderNumber (str): order number
+        Args:
+            pkey (str): private key
+            pem (str): pem
 
-    Returns:
-        Success: FQDN, cert
-        Failed: False
-    """
-    params = {'LOGINNAME': LOGINNAME,
-              'LOGINPASSWORD': LOGINPASSWORD,
-              'orderNumber': orderNumber,
-              'queryType': '1',
-              'responseType': '3',
-              'showFQDN': 'Y'}
-    response = requests.post(COLLECTSSL_URL, params=params).text
-    try:
-        FQDN = response.splitlines()[1]
-    except IndexError:
-        return False
-    else:
-        response_cert = response.split('\n', 2)[2][:-1]
-        split_cert = response_cert.split('-----END CERTIFICATE-----')[::-1]
-        cert_list = [s + '-----END CERTIFICATE-----' for s in split_cert][1:]
-        cert = ''.join(cert_list)[1:]
-        return FQDN, cert
-
-
-def pem_to_pfx(pkey, pem):
-    """PEM format to PFX format
-
-    Args:
-        pkey (str): private key
-        pem (str): pem
-
-    Returns:
-       passphrase,  pfx
-    """
-    key = crypto.load_privatekey(crypto.FILETYPE_PEM, pkey)
-    cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
-    pkcs = crypto.PKCS12()
-    pkcs.set_privatekey(key)
-    pkcs.set_certificate(cert)
-    passphrase = ''.join(random.choice(
-        string.ascii_letters + string.digits)for x in range(10))
-    pfx = pkcs.export(passphrase=passphrase.encode('ASCII'))
-    return passphrase,  pfx
+        Returns:
+        passphrase,  pfx
+        """
+        key = crypto.load_privatekey(crypto.FILETYPE_PEM, pkey)
+        cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem)
+        pkcs = crypto.PKCS12()
+        pkcs.set_privatekey(key)
+        pkcs.set_certificate(cert)
+        passphrase = ''.join(random.choice(
+            string.ascii_letters + string.digits)for x in range(10))
+        pfx = pkcs.export(passphrase=passphrase.encode('ASCII'))
+        return passphrase,  pfx
