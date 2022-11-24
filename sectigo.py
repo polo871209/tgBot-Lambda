@@ -118,11 +118,20 @@ class Sectigo():
         return unique_value
 
     def validation(self, csr, response):
+        """Caculate cname validation value
+
+        Args:
+            csr 
+            response: api response
+
+        Returns:
+            _type_: _description_
+        """
         host = f'_{self.md5(csr)}'
         sha_csr = self.sha256(csr)
         cname_value = f'{sha_csr[:32]}.{sha_csr[32:]}.{self.unique_value}.sectigo.com'
         order_number = response.splitlines()[1]
-        validation = f'Order: {order_number}\nDomain: {self.common_name}\nHost: {host}\nCnameValue: {cname_value}'
+        validation = f"Order: {order_number}\nDomain: {self.common_name.replace('*.', '')}\nHost: {host}\nCname: {cname_value}"
         return validation, order_number
 
     def dv_single(self):
