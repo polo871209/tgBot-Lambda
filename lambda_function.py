@@ -17,18 +17,20 @@ def lambda_handler(event, context):
         command = text[0]
         argument = text[1:]
     except Exception:  # Please input valid syntax
-        tgbot.send_message('Valid syntax: {/Command} {Arguments}')
+        tgbot.send_message('Valid syntax: /Command Arguments')
     else:
         if '/dvsingle' in command:  # Generate dvsingle
             try:
                 domian = argument[0]
-                tgbot.send_message(f'Generating dvsingle: {domian}')
-                s3 = S3(BUCKET_NAME)
                 try:
                     ssl = Sectigo(domian, argument[1])
                 except IndexError:
                     ssl = Sectigo(domian)
+                s3 = S3(BUCKET_NAME)
+                tgbot.send_message(f'Generating dvsingle: {domian}')
                 validation, order_number, pkey, csr = ssl.dv_single()
+            except IndexError:
+                tgbot.send_message(f'Error: Please enter a domain name')
             except Exception as err:
                 tgbot.send_message(f'Error: {err}')
             else:
@@ -58,6 +60,8 @@ def lambda_handler(event, context):
                     validation, order_number, pkey, csr = ssl.dv_wildcard()
             except ValueError:
                 tgbot.send_message('Valid Syntax: *.example.com')
+            except IndexError:
+                tgbot.send_message(f'Error: Please enter a domain name')
             except Exception as err:
                 tgbot.send_message(f'Error: {err}')
             else:
@@ -73,9 +77,12 @@ def lambda_handler(event, context):
                     tgbot.send_message('Data upload to s3 failed')
 
         elif '/revalidate' in command:  # Revalidate  order
-            tgbot.send_message('Revalidating...')
             try:
-                response = Sectigo.revalidate(argument[0])
+                order_number = argument[0]
+                tgbot.send_message('Revalidating...')
+                response = Sectigo.revalidate(order_number)
+            except IndexError:
+                tgbot.send_message(f'Error: Please enter a order number')
             except Exception as err:
                 tgbot.send_message(f'Error: {err}')
             else:
@@ -86,9 +93,12 @@ def lambda_handler(event, context):
                     tgbot.send_message(
                         'Please enter valid order number, or order already issued.')
         elif '/certstatus' in command:  # Order status
-            tgbot.send_message('Checking status...')
             try:
-                response = Sectigo.certstatus(argument[0])
+                order_number = argument[0]
+                tgbot.send_message('Checking status...')
+                response = Sectigo.certstatus(order_number)
+            except IndexError:
+                tgbot.send_message(f'Error: Please enter a order number')
             except Exception as err:
                 tgbot.send_message(f'Error: {err}')
             else:
@@ -101,27 +111,28 @@ def lambda_handler(event, context):
 
         elif '/downloadcert' in text[0]:  # Download order
             try:
+                order_number = argument[0]
                 tgbot.send_message('Downloading...')
                 s3 = S3(BUCKET_NAME)
-                domian, cert = Sectigo.download_cert(argument[0])
+                domian, cert = Sectigo.download_cert(order_number)
                 file_name = domian.replace('.', '_').replace('*', 'star')
-                path = f'{argument[0]}_{file_name}/{file_name}'
+                path = f'{order_number}_{file_name}/{file_name}'
                 key = s3.get_object(f'{path}.key')
                 passphrase, pfx = Sectigo.pem_to_pfx(key, cert)
                 s3.upload_data(f'{path}.pem', cert)
                 s3.upload_data(f'{path}.crt', cert)
                 s3.upload_data(f'{path}.pfx', pfx)
                 s3.upload_data(
-                    f'{argument[0]}_{file_name}/password.txt', passphrase)
-                s3.zip_folder(f'{argument[0]}_{file_name}', path)
+                    f'{order_number}_{file_name}/password.txt', passphrase)
+                s3.zip_folder(f'{order_number}_{file_name}', path)
             except IndexError:
-                tgbot.send_message(f'Downlaod failed!\nError: Enter a order number')
+                tgbot.send_message(f'Error: Please enter a order number')
             except Exception as err:
                 tgbot.send_message(f'Downlaod failed!\nError: {err}')
             else:
                 pre_signurl = s3.gen_presigned_url(f'{path}.zip')
                 tgbot.send_message(pre_signurl)
         else:
-            tgbot.send_message('Click Menu to see what you can do')
+            tgbot.send_message('Type / to see what you can do')
 
     return {"statusCode": 200}
