@@ -114,6 +114,8 @@ def lambda_handler(event, context):
                 s3.upload_data(
                     f'{argument[0]}_{file_name}/password.txt', passphrase)
                 s3.zip_folder(f'{argument[0]}_{file_name}', path)
+            except IndexError:
+                tgbot.send_message(f'Downlaod failed!\nError: Enter a order number')
             except Exception as err:
                 tgbot.send_message(f'Downlaod failed!\nError: {err}')
             else:

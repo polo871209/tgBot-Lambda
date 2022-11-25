@@ -3,9 +3,10 @@ import os
 import shutil
 # this are deploy pn Lamda, so no access key needed, function should have role to access specify bucket.
 
+
 class S3():
     def __init__(self, bucket_name: str):
-        #setting up sessions
+        # setting up sessions
         self.client = boto3.client('s3')
         self.s3 = boto3.resource('s3')
         self.bucket = bucket_name
@@ -22,7 +23,7 @@ class S3():
         """
         result = self.client.put_object(
             Body=data, Bucket=self.bucket, Key=path)
-        res = result.get('ResponseMetadata') # check if success
+        res = result.get('ResponseMetadata')  # check if success
         if res.get('HTTPStatusCode') == 200:
             return True
         else:
@@ -48,14 +49,16 @@ class S3():
             output_filename (str): file path+name **without .zip
         """
         bucket = self.s3.Bucket(self.bucket)
+        if not os.path.exists(f'/tmp/{dir_name}'):
+            os.makedirs(f'/tmp/{dir_name}')
         for f in bucket.objects.filter(Prefix=dir_name):
-            if not os.path.exists(f'/tmp/{dir_name}/'):
-                os.makedirs(f'/tmp/{dir_name}/')
-            bucket.download_file(f.key, f'/tmp/{f.key}')
-            shutil.make_archive(
-                f'/tmp/{output_filename}', 'zip', f'/tmp/{dir_name}')
-            self.s3.Bucket(self.bucket).upload_file(
-                f'/tmp/{output_filename}.zip', f'{output_filename}.zip')
+            if '.zip' not in f.key:
+                bucket.download_file(f.key, f'/tmp/{f.key}')
+        shutil.make_archive(
+            f'/tmp/{dir_name}', 'zip', '/tmp', dir_name)
+        self.s3.Bucket(self.bucket).upload_file(
+            f'/tmp/{dir_name}.zip', f'{output_filename}.zip')
+        shutil.rmtree(f'/tmp/{dir_name}/')
 
     def gen_presigned_url(self, object_name: str, expiration=3600):
         """generate presign url
@@ -70,4 +73,4 @@ class S3():
                 'get_object', Params=params, ExpiresIn=expiration)
             return response
         except Exception as err:
-            return  err
+            return err
