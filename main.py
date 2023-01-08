@@ -10,8 +10,8 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Conve
 
 from utils.sectigo import Sectigo
 
-TOKEN =
-START, SINGLE_DOMAIN, WILDCARD_DOMAIN = range(6)
+TOKEN = "5632658812:AAGqjBlRgCRsUMNwLWAVwncS0mg-weFhh3Q"
+START, SINGLE_DOMAIN, WILDCARD_DOMAIN = range(3)
 
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
