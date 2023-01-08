@@ -22,27 +22,31 @@ DV_WILDCARD = '289'
 
 class Sectigo:
 
-    def __init__(self, domain_name: str, days: Optional[int] = '366'):
+    def __init__(self, domain_name: str, days: Optional[str] = '366'):
         self.domain_name = domain_name
         self.days = days
         self.order_number = ''
         self.unique_value = 'gaia'
 
-    def apply_ssl(self, product: str) -> str:
+    def apply_ssl(self, product: str) -> any:
         """
         apply ssl
-        :param product: product number
-        :return: dns validation str
+        :param product: single or wildcard
+        :return: dns validation(str), key(byte), csr(byte)
         """
+        if product == 'single':
+            product = DV_SINGLE
+        elif product == 'wildcard':
+            product = DV_WILDCARD
         try:
             key, csr = self._generate_key_csr()
             self._ssl_request(product, csr)
-            return self._dns_validation(csr)
+            return self._dns_validation(csr), key, csr
         except requests.RequestException:
-            return 'Request failed'
+            return '請求失敗，請重新嘗試'
 
     @staticmethod
-    def revalidate(order_number: str) -> bool:
+    def revalidate(order_number: str):
         """
         perform DCV check
         :param order_number
@@ -53,9 +57,10 @@ class Sectigo:
             'orderNumber': order_number,
             'newMethod': 'CNAME_CSR_HASH'
         }
-        if requests.post(REVALIDATE_ENDPOINT, params=params).text.splitlines()[0] == 'errorCode=0':
-            return True
-        return False
+        response = requests.post(REVALIDATE_ENDPOINT, params=params).text
+        if 'errorCode=0' or 'errorCode=-4' in response:
+            return Sectigo.status(order_number)
+        raise requests.RequestException
 
     @staticmethod
     def status(order_number: str) -> str:
@@ -73,9 +78,9 @@ class Sectigo:
         }
         response = requests.post(COLLECT_SSL_ENDPOINT, params=params).text
         if response == '0':
-            return f'Order: {order_number}\nStatus: Not Issued'
+            return f'Order: {order_number}\n狀態: 未簽發'
         elif response.split()[0] == '1':
-            return f'Order: {order_number}\nStatus: Issued\nExpire date: {response.split()[2]}'
+            return f'Order: {order_number}\n狀態: 已簽發\n過期日: {response.split()[2]}'
         raise requests.RequestException
 
     @staticmethod
@@ -97,7 +102,7 @@ class Sectigo:
         response = requests.post(COLLECT_SSL_ENDPOINT, params=params).text
         if response == '0':
             return False
-        if response.split()[0] == '2':
+        elif response.split()[0] == '2':
             unordered_cert = response.split('\n', 2)[2][:-1]
             split_cert = unordered_cert.split('-----END CERTIFICATE-----')[::-1]
             cert_list = [s + '-----END CERTIFICATE-----' for s in split_cert][1:]
@@ -198,8 +203,8 @@ class Sectigo:
         host = f'_{self._md5_hash(csr)}'
         sha_csr = self._sha256(csr)
         cname_value = f'{sha_csr[:32]}.{sha_csr[32:]}.{self.unique_value}.sectigo.com'
-        return f"Order: {self.order_number}\n域名: {self.domain_name.replace('*.', '')}\n" \
-               f"HOST: {host}\nCNAME: {cname_value}"
+        return f"訂單編號: {self.order_number}\n域名: {self.domain_name.replace('*.', '')}\n" \
+               f"主機: {host}\nCNAME: {cname_value}"
 
     @staticmethod
     def _gen_unique_value(i: Optional[int] = 10):
@@ -210,8 +215,7 @@ class Sectigo:
         """
         return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(i))
 
-
 # ssl = Sectigo("abc.com")
 # print(ssl.apply_ssl(DV_SINGLE))
-# print(Sectigo.download("1378973013"))
-# print(Sectigo.download("1375237405"))
+# print(Sectigo.revalidate("1378973013"))
+# print(Sectigo.revalidate("1375237405"))

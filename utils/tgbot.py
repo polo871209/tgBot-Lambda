@@ -1,22 +1,17 @@
-import requests
-import os
+from telegram import Update
+from telegram.ext import ContextTypes
 
 
-API_TOKEN = os.environ['api_token']
+async def edit_message(message: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.editMessageText(
+        chat_id=update.effective_chat.id,
+        message_id=update.callback_query.message.message_id,
+        text=message
+    )
 
 
-class Tgbot:
-
-    def __init__(self, chat_id):
-        self.chat_id = chat_id
-
-    def send_message(self, message: str):
-        """send message to chat
-
-        Args:
-            message (str): message
-        """
-        url_req = f'https://api.telegram.org/bot{API_TOKEN}/sendMessage'
-        params = {'chat_id': self.chat_id,
-                  'text': message}
-        requests.get(url_req, params=params)
+async def send_message(message: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(
+        chat_id=update.effective_chat.id,
+        text=message
+    )
