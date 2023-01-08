@@ -10,7 +10,7 @@ from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, Conve
 
 from utils.sectigo import Sectigo
 
-TOKEN = "5632658812:AAGqjBlRgCRsUMNwLWAVwncS0mg-weFhh3Q"
+TOKEN = ""
 START, SINGLE_DOMAIN, WILDCARD_DOMAIN = range(3)
 
 logging.basicConfig(
