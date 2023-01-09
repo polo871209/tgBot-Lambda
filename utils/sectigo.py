@@ -32,18 +32,17 @@ class Sectigo:
         """
         apply ssl
         :param product: single or wildcard
-        :return: dns validation(str), key(byte), csr(byte)
+        :return: dns validation(str), order_number(str), key(byte), csr(byte)
         """
         if product == 'single':
             product = DV_SINGLE
         elif product == 'wildcard':
             product = DV_WILDCARD
-        try:
-            key, csr = self._generate_key_csr()
-            self._ssl_request(product, csr)
-            return self._dns_validation(csr), key, csr
-        except requests.RequestException:
-            return '請求失敗，請重新嘗試'
+
+        key, csr = self._generate_key_csr()
+        self._ssl_request(product, csr)
+        validation = self._dns_validation(csr)
+        return validation, self.order_number, key, csr
 
     @staticmethod
     def revalidate(order_number: str):
@@ -78,9 +77,9 @@ class Sectigo:
         }
         response = requests.post(COLLECT_SSL_ENDPOINT, params=params).text
         if response == '0':
-            return f'Order: {order_number}\n狀態: 未簽發'
+            return f'訂單編號: {order_number}\n狀態: 未簽發'
         elif response.split()[0] == '1':
-            return f'Order: {order_number}\n狀態: 已簽發\n過期日: {response.split()[2]}'
+            return f'訂單編號: {order_number}\n狀態: 已簽發\n過期日: {response.split()[2]}'
         raise requests.RequestException
 
     @staticmethod
@@ -113,12 +112,17 @@ class Sectigo:
 
     @staticmethod
     def pem_to_pfx(key: str, pem: str) -> tuple:
+        """
+        :param key: str
+        :param pem: str
+        :return: passphrase(str), pfx(str)
+        """
         pkcs12 = crypto.PKCS12()
         pkcs12.set_privatekey(crypto.load_privatekey(crypto.FILETYPE_PEM, key))
         pkcs12.set_certificate(crypto.load_certificate(crypto.FILETYPE_PEM, pem.encode('ASCII')))
-        passphrase = Sectigo._gen_unique_value()
-        pfx = pkcs12.export(passphrase=passphrase.encode('ASCII'))
-        return passphrase, pfx
+        passphrase = Sectigo._gen_unique_value().encode('ASCII')
+        pfx = pkcs12.export(passphrase=passphrase)
+        return passphrase.decode('utf-8'), pfx
 
     def _generate_key_csr(self, bit: Optional[int] = 2048) -> tuple:
         """
