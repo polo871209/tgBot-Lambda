@@ -7,9 +7,9 @@ from typing import Optional
 
 import requests
 from OpenSSL import crypto
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 LOGIN_NAME = os.environ['LOGIN_NAME']
 LOGIN_PASSWORD = os.environ['LOGIN_PASSWORD']

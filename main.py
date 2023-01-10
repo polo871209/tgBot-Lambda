@@ -1,9 +1,11 @@
+import http
 import logging
 import os
 import shutil
 
 import requests
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
+from flask import Flask
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, CommandHandler, ConversationHandler, CallbackQueryHandler, \
     MessageHandler, filters
@@ -12,7 +14,7 @@ from utils.cloud_storage import CloudStorage
 from utils.sectigo import Sectigo
 from utils.tgbot import edit_message, send_message, edit_former_message, send_document
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 TOKEN = os.environ['TOKEN']
 START, DV_SINGLE, DV_SINGLE_DOMAIN, DV_WILDCARD, DV_WILDCARD_DOMAIN, \
@@ -168,6 +170,10 @@ async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return EXIT
 
 
+app = Flask(__name__)
+
+
+@app.route("/")
 def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler('start', start)],
@@ -207,10 +213,12 @@ def main():
         },
         fallbacks=[]
     )
+
+    yield {"status": 200}
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(conv_handler)
     application.run_polling()
 
 
-if __name__ == '__main__':
-    main()
+if __name__ == "__main__":
+    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))

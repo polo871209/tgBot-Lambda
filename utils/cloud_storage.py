@@ -3,10 +3,10 @@ gcp cloud storage sdk
 """
 import os
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from google.cloud import storage
 
-load_dotenv()
+load_dotenv(find_dotenv())
 
 
 class CloudStorage:
@@ -50,7 +50,6 @@ class CloudStorage:
             if not os.path.exists(f'{local_dir}{_dir}/'):
                 os.mkdir(f'{local_dir}{_dir}/')
             blob.download_to_filename(f'{local_dir}{_dir}/{filename}')
-
 
 # ssl = CloudStorage()
 # ssl.download_file('1381711117.*.abc.com/', '../tmp/')
