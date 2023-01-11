@@ -1,4 +1,4 @@
-import http
+import logging
 import logging
 import os
 import shutil
@@ -214,11 +214,10 @@ def main():
         fallbacks=[]
     )
 
-    yield {"status": 200}
     application = ApplicationBuilder().token(TOKEN).build()
     application.add_handler(conv_handler)
     application.run_polling()
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=int(os.environ.get("PORT", 8080)))
+    main()
