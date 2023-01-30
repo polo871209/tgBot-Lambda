@@ -1,5 +1,4 @@
 import logging
-import logging
 import os
 import shutil
 
@@ -17,6 +16,7 @@ from utils.tgbot import edit_message, send_message, edit_former_message, send_do
 load_dotenv(find_dotenv())
 
 TOKEN = os.environ['TOKEN']
+CHAT_ID = "-1001810978149"
 START, DV_SINGLE, DV_SINGLE_DOMAIN, DV_WILDCARD, DV_WILDCARD_DOMAIN, \
     REVALIDATE, STATUS, DOWNLOAD, ERROR = range(9)
 EXIT = ConversationHandler.END
@@ -36,6 +36,9 @@ logging.basicConfig(
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if str(update.effective_chat.id) != CHAT_ID:
+        await send_message("Chat are not allowed! Please exit or chat will be banned!", update, context)
+        return EXIT
     await context.bot.send_message(
         chat_id=update.effective_chat.id,
         text="Hi! 我是SSL機器人，請選擇服務",
@@ -160,9 +163,7 @@ async def download(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await send_document(f"./tmp/{_domain.replace('.', '_')}.zip", update, context)
     except Exception:
         return ERROR
-    finally:
-        shutil.rmtree('./tmp/')
-        return EXIT
+    return EXIT
 
 
 async def error(update: Update, context: ContextTypes.DEFAULT_TYPE):

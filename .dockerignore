@@ -5,3 +5,4 @@ venv
 .env.example
 Dockerfile
 README.md
+tmp
