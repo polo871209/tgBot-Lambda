@@ -11,7 +11,7 @@ class S3:
         self.s3 = boto3.resource('s3')
         self.bucket = bucket_name
 
-    def upload_data(self, path: str, data: str) -> bool:
+    def upload_data(self, path: str, data: str | bytes) -> bool:
         """
         upload data to S3
         :param path: file path(key)
