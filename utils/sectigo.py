@@ -6,11 +6,11 @@ import hashlib
 import base64
 import os
 
-LOGINNAME = os.environ['loginName']
-LOGINPASSWORD = os.environ['loginPassword']
-APPLY_SSL_URL = 'https://secure.sectigo.com/products/!AutoApplySSL'
-REVALIDATE_URL = 'https://secure.trust-provider.com/products/!AutoUpdateDCV'
-COLLECTSSL_URL = 'https://secure.trust-provider.com/products/download/CollectSSL'
+LOGIN_NAME = os.environ['loginName']
+LOGIN_PASSWORD = os.environ['loginPassword']
+APPLY_SSL_ENDPOINT = 'https://secure.sectigo.com/products/!AutoApplySSL'
+REVALIDATE_ENDPOINT = 'https://secure.trust-provider.com/products/!AutoUpdateDCV'
+COLLECT_SSL_ENDPOINT = 'https://secure.trust-provider.com/products/download/CollectSSL'
 DV_SINGLE = '287'
 DV_WILDCARD = '289'
 
@@ -21,25 +21,21 @@ class Sectigo:
         self.common_name = common_name
         self.days = days
         self.unique_value = self.gen_unique_value()
-        self.params = {'loginName': LOGINNAME,
-                       'LOGINPASSWORD': LOGINPASSWORD,
+        self.params = {'loginName': LOGIN_NAME,
+                       'loginPassword': LOGIN_PASSWORD,
                        'days': self.days,
                        'uniqueValue': self.unique_value,
                        'isCustomerValidated': 'Y',
                        'serverSoftware': '-1',
                        'dcvMethod': 'CNAME_CSR_HASH'}
 
-    def gen_key_csr(self, bit=2048):
-        """Generate csr, key object.
-
-        Args:
-            bit (int): key size
-
-        Returns:
-            str: csr, key object
+    def gen_key_csr(self) -> tuple[bytes, bytes]:
+        """
+        Generate csr, key object
+        :return: key, csr
         """
         key = crypto.PKey()
-        key.generate_key(crypto.TYPE_RSA, bit)
+        key.generate_key(crypto.TYPE_RSA, 2048)
         csr = crypto.X509Req()
         csr.get_subject().CN = self.common_name
         csr.get_subject().C = 'TW'
@@ -47,57 +43,47 @@ class Sectigo:
         csr.get_subject().O = 'corp'
         csr.set_pubkey(key)
         csr.sign(key, 'SHA256')
-        return key, csr
+        # turn crypto object into byte
+        key_bytes = crypto.dump_privatekey(crypto.FILETYPE_PEM, key)
+        csr_bytes = crypto.dump_certificate_request(crypto.FILETYPE_PEM, csr)
+        return key_bytes, csr_bytes
 
-    def output_key_csr(self):
-        """Output key, csr to file 
-
-        Returns:
-            bytes: private_key, certificate_signing_request
+    @staticmethod
+    def csr_to_der(pem_cert: str) -> bytes:
         """
-        key, csr = self.gen_key_csr()
-        private_key = crypto.dump_privatekey(crypto.FILETYPE_PEM, key)
-        certificate_signing_request = crypto.dump_certificate_request(
-            crypto.FILETYPE_PEM, csr)
-        return private_key, certificate_signing_request
-
-    def md5(self, csr: bytes):
-        """sectigo md5 hash csr 
-
-        Args:
-            csr (str): csr in pem format
-
-        Returns:
-            str: sectigo md5 hash value
+        format csr from pem to der
+        :param pem_cert:
+        :return: csr in der format
         """
-        encode = self.csr_to_der(csr.decode("UTF-8"))
+        pem_header = "-----BEGIN CERTIFICATE REQUEST-----"
+        pem_footer = "-----END CERTIFICATE REQUEST-----"
+        d = str(pem_cert).strip()[len(pem_header):-len(pem_footer)]
+        return base64.decodebytes(d.encode('ASCII', 'strict'))
+
+    def md5(self, csr: bytes) -> str:
+        """
+        sectigo md5 hash csr
+        :return: md5 hash
+        """
         md5_hash = hashlib.md5()
-        md5_hash.update(encode)
+        md5_hash.update(self.csr_to_der(csr.decode("UTF-8")))
         return md5_hash.hexdigest()
 
-    def sha256(self, csr: bytes):
-        """sectigo sha256 hash csr
-
-        Args:
-            csr (str): csr in pem formate
-
-        Returns:
-            str: sectigo sha256 hash value
+    def sha256(self, csr: bytes) -> str:
         """
-        encode = self.csr_to_der(csr.decode("UTF-8"))
+        sectigo sha256 hash csr
+        :return: sha256 hash
+        """
         sha256_hash = hashlib.sha256()
-        sha256_hash.update(encode)
+        sha256_hash.update(self.csr_to_der(csr.decode("UTF-8")))
         return sha256_hash.hexdigest()
 
-    def validation(self, csr, response):
-        """Calculate cname validation value
-
-        Args:
-            csr 
-            response: api response
-
-        Returns:
-            _type_: _description_
+    def validation(self, csr: bytes, response: str) -> tuple[str, str]:
+        """
+        calculate cname validation value
+        :param csr:
+        :param response: api response
+        :return: validation, order_number
         """
         host = f'_{self.md5(csr)}'
         sha_csr = self.sha256(csr)
@@ -106,119 +92,94 @@ class Sectigo:
         validation = f"Order: {order_number}\nDomain: {self.common_name.replace('*.', '')}\nHost: {host}\nCname: {cname_value}"
         return validation, order_number
 
-    def dv_single(self):
-        """dv_single api 
-
-        Returns:
-            Success: validation, order_number, pkey, csr
-            Failed: response
+    def dv_single(self) -> tuple[str, str, bytes, bytes]:
         """
-        pkey, csr = self.output_key_csr()
+        dv_single api
+        :return:
+            success: validation, order_number, private_key, csr
+            failed: pass
+        """
+        pkey, csr = self.gen_key_csr()
         self.params['product'] = DV_SINGLE
         self.params['csr'] = csr
-        response = requests.post(APPLY_SSL_URL, params=self.params).text
+        response = requests.post(APPLY_SSL_ENDPOINT, params=self.params).text
         if response.splitlines()[0] == '0':
             validation, order_number = self.validation(csr, response)
             return validation, order_number, pkey, csr
         else:
-            return response
+            pass
 
-    def dv_wildcard(self):
-        """dv_wildcard api 
-
-        Returns:
-            Success: validation, order_number, pkey, csr
-            Failed: response
+    def dv_wildcard(self) -> tuple[str, str, bytes, bytes]:
         """
-        pkey, csr = self.output_key_csr()
+        dv_wildcard api
+        :return:
+            success: validation, order_number, private_key, csr
+            failed: pass
+        """
+        pkey, csr = self.gen_key_csr()
         self.params['product'] = DV_WILDCARD
         self.params['csr'] = csr
-        response = requests.post(APPLY_SSL_URL, params=self.params).text
+        response = requests.post(APPLY_SSL_ENDPOINT, params=self.params).text
         if response.splitlines()[0] == '0':
             validation, order_number = self.validation(csr, response)
             return validation, order_number, pkey, csr
         else:
-            return response
+            pass
 
     @staticmethod
-    def csr_to_der(pem_cert: str):
-        """Format csr from pem to der
-
-        Args:
-            pem_cert (str): csr in pem formate
-
-        Returns:
-            str: csr in der format
+    def revalidate(order_number: str) -> bool:
         """
-        pem_header = "-----BEGIN CERTIFICATE REQUEST-----"
-        pem_footer = "-----END CERTIFICATE REQUEST-----"
-        d = str(pem_cert).strip()[len(pem_header):-len(pem_footer)]
-        return base64.decodebytes(d.encode('ASCII', 'strict'))
-
-    @staticmethod
-    def revalidate(order_number: str):
-        """Revalidate DNS record
-
-        Args:
-            order_number (str): order number
-
-        Returns:
-            Success: True, Failed: Flase
+        revalidate DNS record
+        :param order_number:
+        :return: result
         """
-        params = {'LOGINNAME': LOGINNAME,
-                  'LOGINPASSWORD': LOGINPASSWORD,
+        params = {'loginName': LOGIN_NAME,
+                  'loginPassword': LOGIN_PASSWORD,
                   'orderNumber': order_number,
                   'newMethod': 'CNAME_CSR_HASH'}
-        if '0' in requests.post(REVALIDATE_URL, params=params).text:
+        if '0' in requests.post(REVALIDATE_ENDPOINT, params=params).text:
             return True
-        else:
-            return False
+        return False
 
     @staticmethod
-    def certstatus(order_number: str):
-        """Check certificate status
-
-        Args:
-            order_number (str): order number
-
-        Returns:
-            Issued: expiredate, Not Issued: False
+    def cert_status(order_number: str) -> str:
         """
-        params = {'LOGINNAME': LOGINNAME,
-                  'LOGINPASSWORD': LOGINPASSWORD,
+        check certificate status
+        :param order_number:
+        :return: expire date
+        """
+        params = {'loginName': LOGIN_NAME,
+                  'loginPassword': LOGIN_PASSWORD,
                   'orderNumber': order_number,
                   'queryType': '0',
                   'showValidityPeriod': 'Y'}
-        response = requests.post(COLLECTSSL_URL, params=params).text
+        response = requests.post(COLLECT_SSL_ENDPOINT, params=params).text
         try:
             return response.split()[2]
         except IndexError:
-            return False
+            pass
 
     @staticmethod
-    def download_cert(order_number: str):
-        """download certificate
-
-        Args:
-            order_number (str): order number
-
-        Returns:
-            Success: FQDN, cert
-            Failed: False
+    def download_cert(order_number: str) -> tuple[str, str]:
         """
-        params = {'LOGINNAME': LOGINNAME,
-                  'LOGINPASSWORD': LOGINPASSWORD,
+        download certificate
+        :param order_number:
+        :return: fqdn, cert
+        """
+        params = {'loginName': LOGIN_NAME,
+                  'loginPassword': LOGIN_PASSWORD,
                   'orderNumber': order_number,
                   'queryType': '1',
                   'responseType': '3',
                   'showFQDN': 'Y'}
-        response = requests.post(COLLECTSSL_URL, params=params).text
+        response = requests.post(COLLECT_SSL_ENDPOINT, params=params).text
         try:
             fqdn = response.splitlines()[1]
         except IndexError:
-            return False
+            pass
         else:
             response_cert = response.split('\n', 2)[2][:-1]
+            # order certificate chains
             split_cert = response_cert.split('-----END CERTIFICATE-----')[::-1]
             cert_list = [s + '-----END CERTIFICATE-----' for s in split_cert][1:]
             cert_list.insert(3, '\n')
@@ -226,15 +187,12 @@ class Sectigo:
             return fqdn, cert
 
     @staticmethod
-    def pem_to_pfx(pkey, pem):
-        """PEM format to PFX format
-
-        Args:
-            pkey (str): private key
-            pem (str): pem
-
-        Returns:
-        passphrase,  pfx
+    def pem_to_pfx(pkey: str, pem: str) -> tuple[str, bytes]:
+        """
+        PEM format to PFX format
+        :param pkey: private key
+        :param pem:
+        :return: passphrase,  pfx
         """
         key = crypto.load_privatekey(crypto.FILETYPE_PEM, pkey)
         cert = crypto.load_certificate(crypto.FILETYPE_PEM, pem.encode('ASCII'))
@@ -246,13 +204,9 @@ class Sectigo:
         return passphrase, pfx
 
     @staticmethod
-    def gen_unique_value(i=10):
-        """Generate unique value a-z, A-Z, 0-9
-
-        Args:
-            i (int, optional): how many indexes
-
-        Returns:
-            str: random str
+    def gen_unique_value() -> str:
         """
-        return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(i))
+        generate unique value a-z, A-Z, 0-9
+        :return:
+        """
+        return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(10))

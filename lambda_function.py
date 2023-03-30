@@ -1,29 +1,35 @@
-from utils.sectigo import Sectigo
-from utils.tgbot import Tgbot
-from utils.aws import S3
 import json
 
+from utils.aws import S3
+from utils.sectigo import Sectigo
+from utils.tgbot import Tgbot
+
 BUCKET_NAME = 'your_bucketname'
+CHAT_ID = 'allowed-chat-id'
 
 
-def lambda_handler(event, context):
+def lambda_handler(event, context) -> dict:
+    """
+    This function receive webhook event and parse command
+    :return: status to end webhook update
+    """
+    # Read event from webhook
     message = json.loads(event['body'])
     chat_id = str(message['message']['chat']['id'])
-    tgbot = Tgbot(chat_id)
-    try:  # Check if user enter valid syntax
+
+    if chat_id == CHAT_ID:  # if user invoke from allowed chat
+        tgbot = Tgbot(CHAT_ID)
         text = message['message']['text'].split()
         command, argument = text[0], text[1:]
-    except Exception:  # Please input valid syntax
-        tgbot.send_message('Valid syntax: /Command Arguments')
-    else:
-        if '/dvsingle' in command:  # Generate dvsingle
+        s3 = S3(BUCKET_NAME)
+
+        if '/dvsingle' in command:
             try:
                 domain = argument[0]
-                try:
+                try:  # if date are not specify, use default
                     ssl = Sectigo(domain, argument[1])
                 except IndexError:
                     ssl = Sectigo(domain)
-                s3 = S3(BUCKET_NAME)
                 tgbot.send_message(f'Generating dvsingle: {domain}')
                 validation, order_number, pkey, csr = ssl.dv_single()
             except IndexError:
@@ -35,20 +41,19 @@ def lambda_handler(event, context):
                 file_path = f'{order_number}_{file_name}/{file_name}'
                 r1 = s3.upload_data(f'{file_path}.key', pkey)
                 r2 = s3.upload_data(f'{file_path}.csr', csr)
-                if r1 and r2:
+                if r1 and r2:  # check if key and csr successfully update
                     tgbot.send_message(validation)
                 else:
                     tgbot.send_message('Data upload to s3 failed')
 
-        elif '/dvwildcard' in command:  # Generate dvsingle
+        elif '/dvwildcard' in command:
             try:
                 domain = argument[0]
                 if '*' not in domain:
                     raise ValueError
                 else:
                     tgbot.send_message(f'Generating dvwildcard: {domain}')
-                    s3 = S3(BUCKET_NAME)
-                    try:
+                    try:  # if date are not specify, use default
                         ssl = Sectigo(domain, argument[1])
                     except IndexError:
                         ssl = Sectigo(domain)
@@ -64,12 +69,12 @@ def lambda_handler(event, context):
                 file_path = f'{order_number}_{file_name}/{file_name}'
                 r1 = s3.upload_data(f'{file_path}.key', pkey)
                 r2 = s3.upload_data(f'{file_path}.csr', csr)
-                if r1 and r2:
+                if r1 and r2:  # check if key and csr successfully update
                     tgbot.send_message(validation)
                 else:
                     tgbot.send_message('Data upload to s3 failed')
 
-        elif '/revalidate' in command:  # Revalidate  order
+        elif '/validate' in command:
             try:
                 order_number = argument[0]
                 tgbot.send_message('Revalidating...')
@@ -82,35 +87,32 @@ def lambda_handler(event, context):
                 if response:
                     tgbot.send_message('Success!\nUse: /certstatus to check status.')
                 else:
-                    tgbot.send_message(
-                        'Please enter valid order number, or order already issued.')
-        elif '/certstatus' in command:  # Order status
+                    tgbot.send_message('Please enter valid order number, or order already issued.')
+        elif '/status' in command:
             try:
                 order_number = argument[0]
                 tgbot.send_message('Checking status...')
-                response = Sectigo.certstatus(order_number)
+                response = Sectigo.cert_status(order_number)
             except IndexError:
                 tgbot.send_message(f'Error: Please enter a order number')
             except Exception as err:
                 tgbot.send_message(f'Error: {err}')
             else:
                 if not response:
-                    tgbot.send_message(
-                        f'Order: {argument[0]}\nStatus: Not Issued')
+                    tgbot.send_message(f'Order: {argument[0]}\nStatus: Not Issued')
                 else:
-                    tgbot.send_message(
-                        f'Order: {argument[0]}\nStatus: Issued\nExpire date: {response}')
+                    tgbot.send_message(f'Order: {argument[0]}\nStatus: Issued\nExpire date: {response}')
 
-        elif '/downloadcert' in text[0]:  # Download order
+        elif '/download' in text[0]:
             try:
                 order_number = argument[0]
                 tgbot.send_message('Downloading...')
-                s3 = S3(BUCKET_NAME)
                 domain, cert = Sectigo.download_cert(order_number)
-                file_name = domain.replace('.', '_').replace('*', 'star')
+                file_name = domain.replace('.', '_').replace('*', 'star')  # window don't recognize * as file name
                 path = f'{order_number}_{file_name}/{file_name}'
-                key = s3.get_object(f'{path}.key')
+                key = s3.get_object(f'{path}.key')  # download key file to gen pfx
                 passphrase, pfx = Sectigo.pem_to_pfx(key, cert)
+                # upload all the file to as then zip it
                 s3.upload_data(f'{path}.pem', cert)
                 s3.upload_data(f'{path}.crt', cert)
                 s3.upload_data(f'{path}.pfx', pfx)
@@ -120,10 +122,15 @@ def lambda_handler(event, context):
                 tgbot.send_message(f'Error: Please enter a order number')
             except Exception as err:
                 tgbot.send_message(f'Download failed!\nError: {err}')
-            else:
+            else:  # gen pre-signed url
                 presign_url = s3.gen_presign_url(f'{path}.zip')
                 tgbot.send_message(presign_url)
         else:
             tgbot.send_message('Type / to see what you can do')
+    else:
+        tgbot = Tgbot(chat_id)
+        tgbot.send_message('not allowed')
 
-    return {"statusCode": 200}
+    return {
+        "statusCode": 200
+    }
