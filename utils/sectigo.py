@@ -1,10 +1,12 @@
-from OpenSSL import crypto
-import requests
+import base64
+import hashlib
+import os
 import random
 import string
-import hashlib
-import base64
-import os
+from typing import Tuple
+
+import requests
+from OpenSSL import crypto
 
 LOGIN_NAME = os.environ['loginName']
 LOGIN_PASSWORD = os.environ['loginPassword']
@@ -29,7 +31,7 @@ class Sectigo:
                        'serverSoftware': '-1',
                        'dcvMethod': 'CNAME_CSR_HASH'}
 
-    def gen_key_csr(self) -> tuple[bytes, bytes]:
+    def gen_key_csr(self) -> Tuple[bytes, bytes]:
         """
         Generate csr, key object
         :return: key, csr
@@ -78,7 +80,7 @@ class Sectigo:
         sha256_hash.update(self.csr_to_der(csr.decode("UTF-8")))
         return sha256_hash.hexdigest()
 
-    def validation(self, csr: bytes, response: str) -> tuple[str, str]:
+    def validation(self, csr: bytes, response: str) -> Tuple[str, str]:
         """
         calculate cname validation value
         :param csr:
@@ -92,7 +94,7 @@ class Sectigo:
         validation = f"Order: {order_number}\nDomain: {self.common_name.replace('*.', '')}\nHost: {host}\nCname: {cname_value}"
         return validation, order_number
 
-    def dv_single(self) -> tuple[str, str, bytes, bytes]:
+    def dv_single(self) -> Tuple[str, str, bytes, bytes]:
         """
         dv_single api
         :return:
@@ -109,7 +111,7 @@ class Sectigo:
         else:
             pass
 
-    def dv_wildcard(self) -> tuple[str, str, bytes, bytes]:
+    def dv_wildcard(self) -> Tuple[str, str, bytes, bytes]:
         """
         dv_wildcard api
         :return:
@@ -160,7 +162,7 @@ class Sectigo:
             pass
 
     @staticmethod
-    def download_cert(order_number: str) -> tuple[str, str]:
+    def download_cert(order_number: str) -> Tuple[str, str]:
         """
         download certificate
         :param order_number:
@@ -187,7 +189,7 @@ class Sectigo:
             return fqdn, cert
 
     @staticmethod
-    def pem_to_pfx(pkey: str, pem: str) -> tuple[str, bytes]:
+    def pem_to_pfx(pkey: str, pem: str) -> Tuple[str, bytes]:
         """
         PEM format to PFX format
         :param pkey: private key
