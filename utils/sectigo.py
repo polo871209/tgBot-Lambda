@@ -3,7 +3,7 @@ import hashlib
 import os
 import random
 import string
-from typing import Tuple
+from typing import Tuple, Union
 
 import requests
 from OpenSSL import crypto
@@ -144,7 +144,7 @@ class Sectigo:
         return False
 
     @staticmethod
-    def cert_status(order_number: str) -> str:
+    def cert_status(order_number: str) -> Union[str, bool]:
         """
         check certificate status
         :param order_number:
@@ -156,10 +156,9 @@ class Sectigo:
                   'queryType': '0',
                   'showValidityPeriod': 'Y'}
         response = requests.post(COLLECT_SSL_ENDPOINT, params=params).text
-        try:
+        if response.split()[0] == '1':
             return response.split()[2]
-        except IndexError:
-            pass
+        return False
 
     @staticmethod
     def download_cert(order_number: str) -> Tuple[str, str]:

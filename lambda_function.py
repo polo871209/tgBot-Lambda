@@ -85,7 +85,7 @@ def lambda_handler(event, context) -> dict:
                 tgbot.send_message(f'Error: {err}')
             else:
                 if response:
-                    tgbot.send_message('Success!\nUse: /certstatus to check status.')
+                    tgbot.send_message('Success!\nUse: /status to check status.')
                 else:
                     tgbot.send_message('Please enter valid order number, or order already issued.')
         elif '/status' in command:
